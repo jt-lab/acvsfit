@@ -1,0 +1,3 @@
+src/acvsfit/__pycache__/
+src/acvsfit.egg-info/
+pre-commit-config.yaml
