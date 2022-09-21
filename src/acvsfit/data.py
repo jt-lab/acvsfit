@@ -1,11 +1,18 @@
 import pandas as pd
-from tqdm.notebook import trange, tqdm
 import json 
 from matplotlib.pylab import plt
 import numpy as np
 
 def aggregate(data):
-    
+    R"""
+    Aggregate trial by trial selection data to count over
+    cycle indices. 
+
+    Parameters
+    ----------
+    data: pandas DataFrame
+        Dataframe as described here: TODO
+    """
     if 'Repetitions' in data:
         return data
     
@@ -25,13 +32,21 @@ def aggregate(data):
     return data
 
 def unaggregate(data):
+    R"""
+    Unaggregate count over cycle indices data to trial by trial selection data to. 
+
+    Parameters
+    ----------
+    data: pandas DataFrame
+        Dataframe as described here: TODO
+    """
+
     if not 'Repetitions' in data:
         return data
     
     new_data = pd.DataFrame()
     
-    for j,row in tqdm(data.iterrows(), desc='Unaggregating',
-                      leave=False, total=len(data)):
+    for j,row in data.iterrows():
         for i in range(0, int(row['Repetitions'])):
             sel = 1 if i < row['Decline_First_Selection'] else 0
             if row['Starting_Plateau_Idx'] == 1:
@@ -47,13 +62,42 @@ def unaggregate(data):
     new_data.reset_index(drop=True)
     return new_data
 
+
 def get_end(phases):
+    R"""
+    Returns the end of the cycle
+
+    Parameters
+    ----------
+    phases: Dictionary
+        Dictionary with the phases as described here: TODO
+    """
     return sorted(phases.keys())[-1]
 
 def load_data(filename):
+    R"""
+    Load dataset. Right now this function simply wraps pandas.read_csv.
+    In the future checks concerning the presence of certain columns 
+    will be added.
+
+    Parameters
+    ----------
+    filename: string
+        Path to the file
+    """
     return pd.read_csv(filename)
 
 def load_phases(filename, plot=True):
+    R"""
+    Load phases from a .json file. 
+
+    Parameters
+    ----------
+    filename: string
+        Path to the file
+    plot: bool
+        If true, a representation of the phases will be plottet
+    """
     indata = json.load(open(filename, 'r'))
     outdata = {int(k): indata[k] for k in indata}
     
@@ -82,11 +126,31 @@ def load_phases(filename, plot=True):
     return outdata
     
 def get_type_names(phases):
+    R"""
+    Get the names of the two stimulus types
+
+    Parameters
+    ----------
+    phases: Dictionary
+        Dictionary with the phases as described here: TODO
+    """
     for k in phases:
         if 'Transition' in phases[k]:
             return phases[k].split(' Transition')[0].split(' to ')
 
 def get_transistion_length(phases):
+    R"""
+    Returns a vector with the length of all transitions.
+
+    Parameters
+    ----------
+    phases: Dictionary
+        Dictionary with the phases as described here: TODO
+    
+    Returns
+    -------
+    Numpy array with the transision lenghts
+    """
     tls = []
     phases_starts = sorted(phases.keys())
     for i,p in enumerate(phases_starts):
@@ -94,9 +158,24 @@ def get_transistion_length(phases):
             tls.append(phases_starts[i+1] - phases_starts[i])
     return(np.array(tls))
 
-def objective_frequency(t, phases):
+def objective_frequency(cycle_index, phases):
+    R"""
+    Function which illustrates the objective proportion
+    of one distractor type.
+
+    Parameters
+    ----------
+    cycle_index: Series of integers; zero-based
+    phases: Dictionary
+        Dictionary with the phases as described here: TODO
+ 
+    Returns
+    -------
+    Objective curve
+    Tick labels
+    """
     tn = get_type_names(phases)
-    t = t
+    t = cycle_index
     labels = []
     func = (t < 0) * 0
     
