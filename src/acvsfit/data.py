@@ -1,3 +1,7 @@
+# Copyright (c) 2022 Jan Tünnermann. All rights reserved.
+# This work is licensed under the terms of the MIT license.  
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
 import pandas as pd
 import json 
 from matplotlib.pylab import plt
