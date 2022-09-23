@@ -144,9 +144,9 @@ def get_model(phases,
         if len(conditions) > 1:
 
             adaptation_mu_log = pm.Normal(
-                'adaptation_µ_log', mu=-2, sigma=0.5, dims=('Condition')),
-            adaptation_sigma_dist = pm.HalfCauchy.dist(
-                beta=1, shape=len(conditions))
+                'adaptation_µ_log', mu=-1, sigma=1, dims=('Condition')),
+            adaptation_sigma_dist = pm.Gamma.dist(
+                mu=0.5, sigma=1.5, shape=len(conditions))
             adaptation_chol, _, adaptation_sigma = pm.LKJCholeskyCov(
                 'adaptation_chol_cov', n=len(conditions), eta=1,
                 sd_dist=adaptation_sigma_dist, compute_corr=True)
@@ -179,8 +179,8 @@ def get_model(phases,
 
         else:  # We have only one condition
             default_priors = {
-                'adaptation_mu_log': "pm.Normal('adaptation_µ_log', -2, 1.5, dims=['Condition'])",
-                'adaptation_sigma_log': "pm.HalfCauchy('adaptation_σ_log', beta=1)",
+                'adaptation_mu_log': "pm.Normal('adaptation_µ_log', mu=-1, sigma=1, dims=['Condition'])",
+                'adaptation_sigma_log': "pm.Gamma('adaptation_σ_log', mu=1.5, sigma=0.5)",
                 'shift_mu': "pm.Normal('shift_µ', 0, shift_mu_sigma, dims=['Condition'])",
                 'shift_sigma':  "pm.Gamma('shift_σ', alpha=3, beta=shift_sigma_dist_b, dims=['Condition'])",
                 'bias_mu': "pm.Normal('bias_µ', 0, 1)",
