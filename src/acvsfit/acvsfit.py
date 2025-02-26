@@ -2,9 +2,8 @@
 # This work is licensed under the terms of the MIT license.  
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
-import aesara as at
 import pymc as pm
-import aesara.tensor as at
+import pytensor.tensor as at
 import os
 import numpy as np
 from matplotlib.pylab import plt
@@ -40,16 +39,15 @@ def adaptation_curve(
     tn = get_type_names(phases)
     sf = 6  # Scale factor
     t = cycle_index - shift
-
     func = at.lt(t, 0) * (sf * -1)
 
     phase_starts = sorted(phases.keys())
 
     for i, ps in enumerate(phase_starts[:-1]):
         if tn[0] + ' Plateau' in phases[ps]:
-            func = func + at.ge(t, ps) * at.lt(t, phase_starts[i+1]) * -sf
+            func = func + at.ge(t, ps) * at.lt(t, phase_starts[i+1]) * -sf 
         elif tn[1] + ' Plateau' in phases[ps]:
-            func = func + at.ge(t, ps) * at.lt(t, phase_starts[i+1]) * +sf
+            func = func + at.ge(t, ps) * at.lt(t, phase_starts[i+1]) *  sf 
         elif tn[0] + ' to ' + tn[1] + ' Transition' in phases[ps]:
             tl = phase_starts[i+1] - ps  # + 1 # Transition lenght
             # + 1# Position on the transition relative to center
@@ -61,14 +59,14 @@ def adaptation_curve(
             # + 1 # Position on the transition relative to center
             tp = t - ps - (tl/2)
             func = func + (at.ge(t, ps) * at.lt(t, phase_starts[i+1])
-                                        * (-1/(tl+1)) * (tp+0.5) * (2*sf))
+                                        * (-1/(tl+1)) * (tp+0.5) * (2*sf))  
     if (tn[0] + ' Plateau' in phases[phase_starts[-2]]
             or 'to ' + tn[0] in phases[phase_starts[-2]]):
         func = func + at.ge(t, phase_starts[-1]) * sf * -1
     else:
         func = func + at.ge(t, phase_starts[-1]) * sf * 1
 
-    return pm.invlogit(func * adaptation + bias)
+    return pm.invlogit(func * adaptation + bias) 
 
 
 def get_model(phases,
@@ -129,8 +127,8 @@ def get_model(phases,
         shift_sigma_dist_b = 1/(np.mean(get_transistion_length(phases))/16)
         if not silent:
             if 'shift_mu' not in custom_priors:
-                print("Auto setting shift_mu to Normal(0, %f) where "
-                      + "SD is 1/8 of the transition length" % (shift_mu_sigma))
+                print(f"Auto setting shift_mu to Normal(0, %f) where "  % shift_mu_sigma
+                      + "SD is 1/8 of the transition length")
             if 'shift_sigma' not in custom_priors:
                 print(("Auto setting  shift_sigma to Gamma(α=3, β=%.2f),"
                        + "so that its mean is %.2f") % (
@@ -293,7 +291,7 @@ def get_samples(model,
     return trace
 
 
-def interactive(phases, static=False):
+def interactive(phases, static=False, upper_limit=1):
     R"""
     Interactive adaptation curve widget for jupyter notebooks.
 
@@ -318,7 +316,7 @@ def interactive(phases, static=False):
         fig = plt.figure(figsize=(14.5, 6))
         ax = fig.add_subplot(1, 1, 1)
         predicted = adaptation_curve(t, phases, adaptation, shift, bias)
-        obj_frequency, labels = objective_frequency(t, phases)
+        obj_frequency, labels = objective_frequency(t, phases, upper_limit)
         line, = plt.plot(t, predicted.eval(), color='blue', linewidth=3)
         plt.plot(t, obj_frequency, color='black', linewidth=3)
         plt.axhline(0.5, color='black')

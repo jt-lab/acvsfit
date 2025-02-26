@@ -91,7 +91,7 @@ def load_data(filename):
     """
     return pd.read_csv(filename)
 
-def load_phases(filename, plot=True):
+def load_phases(filename, plot=True, upper_limit=1):
     R"""
     Load phases from a .json file. 
 
@@ -113,7 +113,7 @@ def load_phases(filename, plot=True):
         end =  get_end(outdata)
         t = np.linspace(0, end-1, end)
   
-        obj_frequency, labels = objective_frequency(t, outdata)
+        obj_frequency, labels = objective_frequency(t, outdata, upper_limit=upper_limit)
         
         plt.plot(t, obj_frequency, color = 'black' , linewidth = 3)
         plt.axhline(0.5, color = 'black')
@@ -162,7 +162,7 @@ def get_transistion_length(phases):
             tls.append(phases_starts[i+1] - phases_starts[i])
     return(np.array(tls))
 
-def objective_frequency(cycle_index, phases):
+def objective_frequency(cycle_index, phases, upper_limit=1):
     R"""
     Function which illustrates the objective proportion
     of one distractor type.
@@ -189,7 +189,7 @@ def objective_frequency(cycle_index, phases):
         if tn[0] + ' Plateau' in phases[ps]:
             func = func + (t >= ps)  * (t < phase_starts[i+1])  * 0
         elif tn[1] + ' Plateau' in phases[ps]:
-            func = func + (t >= ps) * (t < phase_starts[i+1])  * 1
+            func = func + (t >= ps) * (t < phase_starts[i+1])  * 1 
         elif tn[0] + ' to ' + tn[1] + ' Transition' in phases[ps]:
             tl = phase_starts[i+1] - ps + 1# Transition lenght
             tp = t - ps + 1 #- (tl/2) # Position on the transition relative to center
@@ -208,6 +208,6 @@ def objective_frequency(cycle_index, phases):
             labels.extend(['T%d'%(j+1) for j in range(0, phase_starts[i+1]-ps)])
  
     func = func + (t >= phase_starts[-1]) * 0 
-    
+    func = func * upper_limit
     return func, labels
    
