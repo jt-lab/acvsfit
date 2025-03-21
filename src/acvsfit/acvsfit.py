@@ -87,95 +87,38 @@ def adaptation_curve(
 
 
 
-def adaptation_curve_old(
-    cycle_index,
-    phases,
-    adaptation=1,
-    shift=0,
-    bias=0,
-    upper_limit=1,
-):
-    R"""
-    Implementation of the adaptation curve.
-
-    Parameters
-    ----------
-    cycle_index: series of integers
-        The cycle_index starting at zero.  
-    phases: dictionary
-        Plateau and transition phases is the format specifed here: TODO.
-    adaptation: float
-        Parameter adaptation τ; defaults to 1
-    shift: float
-        Parameter shift δ; defaults to 0
-    bias: float
-        Parameter bias β; defaults to 0
-    """
-    #ul = np.log(upper_limit / (1 - upper_limit)) # Convert upper limit to log odds
-    ul = upper_limit*2-1
-    tn = get_type_names(phases)
-    sf = 1 #6  # Scale factor
-    t = cycle_index - shift
-    func = at.lt(t, 0) * (sf * -1)
-
-    phase_starts = sorted(phases.keys())
-
-    for i, ps in enumerate(phase_starts[:-1]):
-        if tn[0] + ' Plateau' in phases[ps]:
-            func = func + at.ge(t, ps) * at.lt(t, phase_starts[i+1]) * -sf
-        elif tn[1] + ' Plateau' in phases[ps]:
-            func = func + at.ge(t, ps) * at.lt(t, phase_starts[i+1]) *  sf 
-        elif tn[0] + ' to ' + tn[1] + ' Transition' in phases[ps]:
-            tl = (phase_starts[i+1] - ps)    # + 1 # Transition lenght
-            # + 1# Position on the transition relative to center
-            tp = t - ps - (tl/2)
-            func = func + (at.ge(t, ps) * at.lt(t, phase_starts[i+1])
-                                        * (1/(tl+1))  * (tp+0.5) * (2*sf)) 
-        elif tn[1] + ' to ' + tn[0] + ' Transition' in phases[ps]:
-            tl = phase_starts[i+1] - ps  # + 1# Transition lenght
-            # + 1 # Position on the transition relative to center
-            tp = t - ps - (tl/2)
-            func = func + (at.ge(t, ps) * at.lt(t, phase_starts[i+1])
-                                        * (-1/(tl+1))  * (tp+0.5) * (2*sf))  
-    if (tn[0] + ' Plateau' in phases[phase_starts[-2]]
-            or 'to ' + tn[0] in phases[phase_starts[-2]]):
-        func = func + at.ge(t, phase_starts[-1]) * sf * -1
-    else:
-        func = func + at.ge(t, phase_starts[-1]) * sf * 1 * ul
-
-    #return pm.invlogit(func * adaptation + bias)
-    return func # * adaptation + bias
-
-
-
 def get_model(phases,
               data,
+              upper_limit=1,
               custom_priors={},
               custom_links=None,
               silent=False
 ):
-    R"""
-    Setup a PyMC model from an adaptation curve defined
-    via the pahses as documented here: TODO
+    """Sets up a PyMC model from an adaptation curve defined by phases.
 
-    Parameters
-    ----------
-    phases: list
-        A list with dictionaries as described here: TODO.
-    data: pandas DataFrame
-        Dataframe with columns as described here: TODO.
-    custom_priors: dictionary
-        Dictionary with PyMC distributions definitions as 
-        a string which is evaluated to set up the priors;
-        defaults to empty dictionary
-    custom_links: list
-        Link function between group and participant level;
-        defaults to None, which leads to identity links for
-        all parameters except adaptation, which gets linked
-        via an exponential function
-    silent: bool
-        If true, status outputs are surpressed; defaults to
-        False
+    Constructs a hierarchical Bayesian model in PyMC based on the provided 
+    adaptation curve phases and dataset. Allows customization of prior 
+    distributions and link functions.
+
+    Args:
+        phases (list): 
+            A list of dictionaries defining the adaptation curve phases 
+            (see TODO for details).
+        data (pd.DataFrame): 
+            A Pandas DataFrame containing the required columns (see TODO for details).
+        custom_priors (dict, optional): 
+            A dictionary specifying PyMC distribution definitions as strings, 
+            which are evaluated to set up priors. Defaults to an empty dictionary.
+        custom_links (list, optional): 
+            Defines link functions between group- and participant-level parameters. 
+            Defaults to `None`, leading to identity links for all parameters except 
+            adaptation, which is linked via an exponential function.
+        silent (bool, optional): 
+            If True, suppresses status outputs. Defaults to `False`.
+
+    Returns:
+        pm.Model: 
+            A fully specified PyMC model ready for sampling.
     """
     links = {'adaptation': pm.math.exp,
              'shift': lambda x: x, 'bias': lambda x: x}
@@ -304,7 +247,8 @@ def get_model(phases,
             'p_selected',  adaptation_curve(cy_idx, phases,
                                             adaptation[p_idx, co_idx],
                                             shift[p_idx, co_idx],
-                                            bias_[sp_idx, p_idx]))
+                                            bias_[sp_idx, p_idx],
+                                            upper_limit))
 
         y = pm.Binomial('y', p=p_selected, n=repetitions, observed=selections)
 
