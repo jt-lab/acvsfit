@@ -142,7 +142,7 @@ def plot_empirical_participant_curves(data,
         plt.suptitle(condition)
 
 def plot_prior_simulations(model, phases, fix_adaptation=None,
-                          fix_shift=None, fix_bias=None, simulations=100, ax=None):
+                          fix_shift=None, fix_bias=None, upper_limit=1, simulations=100, ax=None):
     
    
     
@@ -172,7 +172,7 @@ def plot_prior_simulations(model, phases, fix_adaptation=None,
     else:
         bias=fix_bias
 
-    adaptation_curves = adaptation_curve(ci, phases, adaptation=adaptation, shift=shift, bias=bias).eval()
+    adaptation_curves = adaptation_curve(ci, phases, adaptation=adaptation, shift=shift, bias=bias, upper_limit=upper_limit).eval()
     ax.plot(adaptation_curves.T)
     
 def plot_priors(model,
@@ -219,6 +219,7 @@ def plot_prior_simulations_quartet(model,
                                    phases,
                                    seed=0,
                                    simulations=100,
+                                   upper_limit=1,
                                    axs=None,
                                    labels=('A', 'B', 'C', 'D')):
     
@@ -238,10 +239,14 @@ def plot_prior_simulations_quartet(model,
     shift=trace.prior['shift'].values[0,-simulations:,0,0].reshape(-1,1)
     bias=trace.prior['bias'].values[0,-simulations:,0].reshape(-1,1)
 
-    acs = adaptation_curve(ci, phases, adaptation=adaptation, shift=shift, bias=bias).eval().T
-    acs_adaptation = adaptation_curve(ci, phases, adaptation=adaptation, shift=0, bias=0).eval().T
-    acs_shift = adaptation_curve(ci, phases, adaptation=1, shift=shift, bias=0).eval().T
-    acs_bias = adaptation_curve(ci, phases, adaptation=0, shift=0, bias=bias).eval().T
+    acs = adaptation_curve(ci, phases, adaptation=adaptation,
+                           shift=shift, bias=bias, upper_limit=upper_limit).eval().T
+    acs_adaptation = adaptation_curve(ci, phases, adaptation=adaptation,
+                                      shift=0, bias=0, upper_limit=upper_limit).eval().T
+    acs_shift = adaptation_curve(ci, phases, adaptation=1,
+                                 shift=shift, bias=0, upper_limit=upper_limit).eval().T
+    acs_bias = adaptation_curve(ci, phases, adaptation=0,
+                                shift=0, bias=bias, upper_limit=upper_limit).eval().T
     axs[0,0].plot(acs)
     axs[0,0].set_title('All parameters')
     axs[0,0].set_ylim(0, 1)
@@ -271,6 +276,7 @@ def plot_examples(model, phases,
                   shift_delta = 'auto',
                   bias_beta = [-5, -2, 0, 2, 5],
                   fixed_values = {'tau' : [1, 0.05], 'beta' : [0,0], 'delta' : [0,0]},
+                  upper_limit=1,
                   axs=None,
                   labels=('A', 'B', 'C'),
                   fignum='1',
@@ -294,7 +300,8 @@ def plot_examples(model, phases,
     for i,tau in enumerate(adaptation_tau):
         delta = fixed_values['delta'][0]
         beta = fixed_values['beta'][0]
-        acs = adaptation_curve(ci, phases, adaptation=tau, shift=delta, bias=beta).eval().T
+        acs = adaptation_curve(ci, phases, adaptation=tau,
+                               shift=delta, bias=beta, upper_limit=upper_limit).eval().T
         axs[0].plot(acs, label = 'τ = %.2f (δ = %.2f, β = %.2f)'%(tau,delta,beta))
     axs[0].set_title('Adaptation τ')
     legend = axs[0].legend(loc="lower center", bbox_to_anchor=(0.5, -0.65), ncol= 1)
@@ -304,7 +311,8 @@ def plot_examples(model, phases,
     for delta in shift_delta:
         tau = fixed_values['tau'][0]
         beta = fixed_values['beta'][1]
-        acs = adaptation_curve(ci, phases, adaptation=tau, shift=delta, bias=beta).eval().T
+        acs = adaptation_curve(ci, phases, adaptation=tau,
+                               shift=delta, bias=beta, upper_limit=upper_limit).eval().T
         axs[1].plot(acs, label = 'δ = %.2f (τ = %.2f, β = %.2f)'%(delta,tau,beta))
     axs[1].set_title('Shift δ')
     legend = axs[1].legend(loc="lower center", bbox_to_anchor=(0.5, -0.65), ncol= 1)
@@ -313,7 +321,8 @@ def plot_examples(model, phases,
     for beta in bias_beta:
         delta = fixed_values['delta'][1]
         tau = fixed_values['tau'][1]
-        acs = adaptation_curve(ci, phases, adaptation=tau, shift=delta, bias=beta).eval().T
+        acs = adaptation_curve(ci, phases, adaptation=tau,
+                               shift=delta, bias=beta, upper_limit=upper_limit).eval().T
         axs[2].plot(acs, label = 'β = %.2f (τ = %.2f, δ = %.2f)'%(beta,tau,delta))
         axs[2].set_title('Bias β')
     legend = axs[2].legend(loc="lower center", bbox_to_anchor=(0.5, -0.65), ncol= 1)

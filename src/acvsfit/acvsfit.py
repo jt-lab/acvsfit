@@ -152,7 +152,8 @@ def get_model(phases,
               data,
               custom_priors={},
               custom_links=None,
-              silent=False
+              silent=False,
+              upper_limit=1
 ):
     R"""
     Setup a PyMC model from an adaptation curve defined
@@ -304,7 +305,9 @@ def get_model(phases,
             'p_selected',  adaptation_curve(cy_idx, phases,
                                             adaptation[p_idx, co_idx],
                                             shift[p_idx, co_idx],
-                                            bias_[sp_idx, p_idx]))
+                                            bias_[sp_idx, p_idx],
+                                            upper_limit=upper_limit)
+        )
 
         y = pm.Binomial('y', p=p_selected, n=repetitions, observed=selections)
 
