@@ -208,6 +208,6 @@ def objective_frequency(cycle_index, phases, upper_limit=1):
             labels.extend(['T%d'%(j+1) for j in range(0, phase_starts[i+1]-ps)])
  
     func = func + (t >= phase_starts[-1]) * 0 
-    func = func * upper_limit
+    func = func * upper_limit + (1-upper_limit)
     return func, labels
    

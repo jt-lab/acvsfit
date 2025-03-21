@@ -47,8 +47,8 @@ def adaptation_curve(
     """
     # Define scale factor
     sf = 6  # Hard coded scaling factor so that values are in a nicer range
-    sf_neg = -sf  
-    sf_pos = sf * ((upper_limit * 2) - 1)  # Scaled positive side
+    sf_neg = -sf * ((upper_limit * 2) - 1)  # Scaled positive side
+    sf_pos = sf 
 
     # Adjust time index
     t = cycle_index - shift  
