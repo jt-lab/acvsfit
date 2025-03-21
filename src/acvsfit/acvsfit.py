@@ -93,7 +93,6 @@ def get_model(phases,
               custom_priors={},
               custom_links=None,
               silent=False,
-              upper_limit=1
 ):
     """Sets up a PyMC model from an adaptation curve defined by phases.
 
