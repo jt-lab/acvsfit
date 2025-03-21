@@ -589,7 +589,7 @@ def plot_group_ppc(trace, data, phases, colors=None,
     
     
     samples = az.extract_dataset(trace, group='posterior_predictive', var_names='y',
-                       num_samples=hdi_samples).to_array().values[0,:,:]
+                       num_samples=hdi_samples).values[0,:,:]
 
     da = acvsfit.aggregate(data)
     n = (da.Condition_Name.nunique()
