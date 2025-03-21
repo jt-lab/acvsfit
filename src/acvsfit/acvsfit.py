@@ -1,4 +1,4 @@
-# Copyright (c) 2022 Jan Tünnermann. All rights reserved.
+# Copyright (c) 2022 - 2025 Jan Tünnermann. All rights reserved.
 # This work is licensed under the terms of the MIT license.  
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
@@ -13,12 +13,87 @@ from .data import aggregate, get_end, get_type_names, get_transistion_length, ob
 import pandas as pd
 from IPython.core.display import display, HTML
 
+import pytensor.tensor as at
+
+import pytensor.tensor as at
+
 def adaptation_curve(
     cycle_index,
     phases,
     adaptation=1,
     shift=0,
-    bias=0
+    bias=0,
+    upper_limit=1,
+):
+    """Computes an adaptation curve with that defines transitions between phases.
+
+    Args:
+        cycle_index (TensorVariable): 
+            A series of integers representing the cycle index, starting at zero.
+        phases (dict): 
+            A dictionary defining plateau and transition phases.
+        adaptation (float, optional): 
+            Adaptation parameter τ (default is 1).
+        shift (float, optional): 
+            Shift parameter δ, offsetting `cycle_index` (default is 0).
+        bias (float, optional): 
+            Bias parameter β (default is 0).
+        upper_limit (float, optional): 
+            Controls the max positive value, e.g. if the positive plateau
+            is at only 0.75 compared to the negative, set upper_limit to 0.75
+
+    Returns:
+        TensorVariable: The computed adaptation curve function.
+    """
+    # Define scale factor
+    sf = 6  # Hard coded scaling factor so that values are in a nicer range
+    sf_neg = -sf  
+    sf_pos = sf * ((upper_limit * 2) - 1)  # Scaled positive side
+
+    # Adjust time index
+    t = cycle_index - shift  
+    func = at.where(t < 0, sf_neg, 0)  # Initialize function, -sf before first phase
+
+    # Get phase start times and type names
+    phase_starts = sorted(phases.keys())
+    tn = get_type_names(phases)  
+
+    # Compute plateau and transition phases
+    for i, ps in enumerate(phase_starts[:-1]):
+        next_phase = phase_starts[i + 1]
+        phase_label = phases[ps]
+        active = at.ge(t, ps) * at.lt(t, next_phase)  # Boolean mask for phase range
+
+        if tn[0] + ' Plateau' in phase_label:
+            func += active * sf_neg  
+
+        elif tn[1] + ' Plateau' in phase_label:
+            func += active * sf_pos  
+
+        elif tn[0] + ' to ' + tn[1] + ' Transition' in phase_label:
+            tl_inv = 1 / (next_phase - ps)  # Precompute inverse length for efficiency
+            func += active * ((t - ps) * tl_inv * (sf_pos - sf_neg) + sf_neg)
+
+        elif tn[1] + ' to ' + tn[0] + ' Transition' in phase_label:
+            tl_inv = 1 / (next_phase - ps)  
+            func += active * ((-(t - ps)) * tl_inv * (sf_pos - sf_neg) + sf_pos)
+
+    # Handle the final phase
+    last_phase_label = phases[phase_starts[-2]]
+    func += at.ge(t, phase_starts[-1]) * (sf_neg if tn[0] + ' Plateau' in last_phase_label or 'to ' + tn[0] in last_phase_label else sf_pos)
+
+    return pm.invlogit(func * adaptation + bias)
+
+
+
+
+def adaptation_curve_old(
+    cycle_index,
+    phases,
+    adaptation=1,
+    shift=0,
+    bias=0,
+    upper_limit=1,
 ):
     R"""
     Implementation of the adaptation curve.
@@ -36,8 +111,10 @@ def adaptation_curve(
     bias: float
         Parameter bias β; defaults to 0
     """
+    #ul = np.log(upper_limit / (1 - upper_limit)) # Convert upper limit to log odds
+    ul = upper_limit*2-1
     tn = get_type_names(phases)
-    sf = 6  # Scale factor
+    sf = 1 #6  # Scale factor
     t = cycle_index - shift
     func = at.lt(t, 0) * (sf * -1)
 
@@ -45,28 +122,30 @@ def adaptation_curve(
 
     for i, ps in enumerate(phase_starts[:-1]):
         if tn[0] + ' Plateau' in phases[ps]:
-            func = func + at.ge(t, ps) * at.lt(t, phase_starts[i+1]) * -sf 
+            func = func + at.ge(t, ps) * at.lt(t, phase_starts[i+1]) * -sf
         elif tn[1] + ' Plateau' in phases[ps]:
             func = func + at.ge(t, ps) * at.lt(t, phase_starts[i+1]) *  sf 
         elif tn[0] + ' to ' + tn[1] + ' Transition' in phases[ps]:
-            tl = phase_starts[i+1] - ps  # + 1 # Transition lenght
+            tl = (phase_starts[i+1] - ps)    # + 1 # Transition lenght
             # + 1# Position on the transition relative to center
             tp = t - ps - (tl/2)
             func = func + (at.ge(t, ps) * at.lt(t, phase_starts[i+1])
-                                        * (1/(tl+1)) * (tp+0.5) * (2*sf))
+                                        * (1/(tl+1))  * (tp+0.5) * (2*sf)) 
         elif tn[1] + ' to ' + tn[0] + ' Transition' in phases[ps]:
             tl = phase_starts[i+1] - ps  # + 1# Transition lenght
             # + 1 # Position on the transition relative to center
             tp = t - ps - (tl/2)
             func = func + (at.ge(t, ps) * at.lt(t, phase_starts[i+1])
-                                        * (-1/(tl+1)) * (tp+0.5) * (2*sf))  
+                                        * (-1/(tl+1))  * (tp+0.5) * (2*sf))  
     if (tn[0] + ' Plateau' in phases[phase_starts[-2]]
             or 'to ' + tn[0] in phases[phase_starts[-2]]):
         func = func + at.ge(t, phase_starts[-1]) * sf * -1
     else:
-        func = func + at.ge(t, phase_starts[-1]) * sf * 1
+        func = func + at.ge(t, phase_starts[-1]) * sf * 1 * ul
 
-    return pm.invlogit(func * adaptation + bias) 
+    #return pm.invlogit(func * adaptation + bias)
+    return func # * adaptation + bias
+
 
 
 def get_model(phases,
@@ -241,29 +320,32 @@ def get_samples(model,
                 thin=None,
                 silent=False
 ):
-    R"""
-    Sample from the model to generate the posterior. Also stores the
-    prior predictive and posterior predictive distribution in the trace.
-    The samples are loaded from disk if an existing trace file is porived.
+    """Generates posterior samples from a PyMC model.
 
-    Parameters
-    ----------
-    model: PyMC model created with get_model(...)
-    samples: int
-        Number of samples to be drawn in each chain after tuning;
-        defaults to 2000
-    tune: int
-        Samples used to tune the NUTS sampler; defaults to 1000
-    target_accept: float (in range 0..1)
-        Target accept rate for the NUTS sampler; defaults to 0.75
-    seed: int
-        Seed for the random number generator; defaults to 0
-    thin: int
-        Keep only every nth sample to thin the trace; defaults
-        to None
-    silent: bool
-        If true, status outputs are surpressed;
-        defaults to False
+    Draws samples using the NUTS sampler and stores the prior predictive 
+    and posterior predictive distributions in the trace. If an existing 
+    trace file is provided, samples are loaded from disk.
+
+    Args:
+        model (Model): 
+            A PyMC model created using `get_model(...)`.
+        samples (int, optional): 
+            Number of samples to be drawn per chain after tuning (default is 2000).
+        tune (int, optional): 
+            Number of samples used for tuning the NUTS sampler (default is 1000).
+        target_accept (float, optional): 
+            Target acceptance rate for the NUTS sampler, in the range [0,1] (default is 0.75).
+        seed (int, optional): 
+            Seed for the random number generator (default is 0).
+        thin (int, optional): 
+            Keep only every nth sample to thin the trace (default is None).
+        silent (bool, optional): 
+            If True, suppresses status outputs (default is False).
+
+    Returns:
+        Trace: 
+            The sampled posterior trace containing posterior, prior predictive, 
+            and posterior predictive distributions.
     """
     with model:
         if file is None or not os.path.isfile(str(file)):
@@ -292,16 +374,21 @@ def get_samples(model,
 
 
 def interactive(phases, static=False, upper_limit=1):
-    R"""
-    Interactive adaptation curve widget for jupyter notebooks.
+    """Creates an interactive adaptation curve widget for Jupyter notebooks.
 
-    Parameters
-    ----------
-    phases: dictionary
-        Dictionary with the phases as specified here TODO
-    static: bool
-        If true, a static version without sliders is 
-        produced (e.g. for saving a ntoebook to PDF)
+    Generates an adaptation curve visualization with interactive sliders 
+    for adjusting parameters. If `static` is set to True, a non-interactive 
+    version is created for exporting (e.g., saving a notebook as a PDF).
+
+    Args:
+        phases (dict): 
+            Dictionary defining the phases (see TODO for specification).
+        static (bool, optional): 
+            If True, generates a static version without sliders (default is False).
+
+    Returns:
+        Widget or Plot: 
+            An interactive widget if `static=False`, otherwise a static plot.
     """
     from ipywidgets import interact, widgets
     from IPython.display import clear_output
@@ -315,11 +402,11 @@ def interactive(phases, static=False, upper_limit=1):
         clear_output(wait=True)
         fig = plt.figure(figsize=(14.5, 6))
         ax = fig.add_subplot(1, 1, 1)
-        predicted = adaptation_curve(t, phases, adaptation, shift, bias)
+        predicted = adaptation_curve(t, phases, adaptation, shift, bias, upper_limit)
         obj_frequency, labels = objective_frequency(t, phases, upper_limit)
         line, = plt.plot(t, predicted.eval(), color='blue', linewidth=3)
         plt.plot(t, obj_frequency, color='black', linewidth=3)
-        plt.axhline(0.5, color='black')
+        plt.axhline(0, color='black')
         plt.ylim(0, 1)
         for tx in t:
             plt.axvline(x=tx, linestyle='-', linewidth=0.5, color='gray')
@@ -328,7 +415,7 @@ def interactive(phases, static=False, upper_limit=1):
     tl = np.mean(get_transistion_length(phases))
 
     if static == False:
-        interact(update, adaptation=widgets.FloatSlider(min=0, max=10, value=1, step=0.01,
+        interact(update, adaptation=widgets.FloatSlider(min=0, max=10, value=1, step=0.001,
                                                         description="Adaptation"),
                  shift=widgets.FloatSlider(
                      min=-tl, max=tl, value=0, step=0.1, description="Shift"),
@@ -342,34 +429,46 @@ def interactive(phases, static=False, upper_limit=1):
 
 
 def get_table(trace, var_names=['~selected']):
-    R"""
-    Get summary table.
+    """Generates a summary table from an ArviZ inference data object.
 
-    Parameters
-    ----------
-    trace: trace (ArviZ inference data object)
-        Trace with the posterior samples
-    static: list
-        List of parameter names to include/exclude; defaults to
-        ['~selected'], which excludes the latent selection probabilities
-        at each cycle index to keep trace size in check.
+    Extracts key statistics from the posterior samples in the trace. 
+    The `static` argument allows inclusion or exclusion of specific 
+    parameters.
+
+    Args:
+        trace (InferenceData): 
+            An ArviZ inference data object containing posterior samples.
+        static (list, optional): 
+            List of parameter names to include/exclude. Defaults to 
+            `['~selected']`, which excludes the latent selection probabilities 
+            at each cycle index `t`.
+
+    Returns:
+        DataFrame: 
+            A summary table with key statistics from the posterior samples.
     """
     summary = az.summary(trace, var_names=var_names, filter_vars='like')
     return summary
 
 
 def get_diagnostic(trace, var_names=['~selected']):
-    R"""
-    Get diagnostics table.
+    """Generates a diagnostics table from an ArviZ inference data object.
 
-    Parameters
-    ----------
-    trace: trace (ArviZ inference data object)
-        Trace with the posterior samples
-    static: list
-        List of parameter names to include/exclude; defaults to
-        ['~selected'], which excludes the latent selection probabilities
-        at each cycle index to keep trace size in check.
+    Computes diagnostic statistics for the posterior samples, such as 
+    convergence metrics. The `static` argument allows inclusion or exclusion 
+    of specific parameters to manage trace size.
+
+    Args:
+        trace (InferenceData): 
+            An ArviZ inference data object containing posterior samples.
+        static (list, optional): 
+            List of parameter names to include/exclude. Defaults to 
+            `['~selected']`, which excludes the latent selection probabilities 
+            at each cycle index to reduce trace size.
+
+    Returns:
+        DataFrame: 
+            A diagnostics table with convergence statistics for the posterior samples.
     """
     table = get_table(trace, var_names)
     diag = pd.DataFrame(table[['ess_bulk', 'ess_tail', 'r_hat']].describe())
