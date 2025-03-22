@@ -250,8 +250,8 @@ def get_model(phases,
                                             adaptation[p_idx, co_idx],
                                             shift[p_idx, co_idx],
                                             bias_[sp_idx, p_idx],
-                                            upper_limit=[upper_limt, lower_limit][sp_idx],
-                                            lower_limit=[upper_limt, lower_limit][-sp_idx]
+                                            upper_limit=[upper_limit, lower_limit][sp_idx],
+                                            lower_limit=[upper_limit, lower_limit][-sp_idx]
                                            )
         )
 
