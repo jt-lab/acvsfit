@@ -24,6 +24,7 @@ def adaptation_curve(
     shift=0,
     bias=0,
     upper_limit=1,
+    lower_limit=1,
 ):
     """Computes an adaptation curve with that defines transitions between phases.
 
@@ -47,8 +48,8 @@ def adaptation_curve(
     """
     # Define scale factor
     sf = 6  # Hard coded scaling factor so that values are in a nicer range
-    sf_neg = -sf * ((upper_limit * 2) - 1)  # Scaled positive side
-    sf_pos = sf 
+    sf_pos = sf * ((upper_limit * 2) - 1)
+    sf_neg = -sf * ((lower_limit * 2) - 1)
 
     # Adjust time index
     t = cycle_index - shift  
@@ -90,6 +91,7 @@ def adaptation_curve(
 def get_model(phases,
               data,
               upper_limit=1,
+              lower_limit=1,
               custom_priors={},
               custom_links=None,
               silent=False,
@@ -248,7 +250,9 @@ def get_model(phases,
                                             adaptation[p_idx, co_idx],
                                             shift[p_idx, co_idx],
                                             bias_[sp_idx, p_idx],
-                                            upper_limit=upper_limit)
+                                            upper_limit=[upper_limt, lower_limit][sp_idx],
+                                            lower_limit=[upper_limt, lower_limit][-sp_idx]
+                                           )
         )
 
 
@@ -319,7 +323,7 @@ def get_samples(model,
     return trace
 
 
-def interactive(phases, static=False, upper_limit=1):
+def interactive(phases, static=False, limit=1):
     """Creates an interactive adaptation curve widget for Jupyter notebooks.
 
     Generates an adaptation curve visualization with interactive sliders 
@@ -341,16 +345,19 @@ def interactive(phases, static=False, upper_limit=1):
     end = get_end(phases)
     t = np.linspace(0, end-1, end)
 
-    predicted = None
+    predicted_sp0 = None
+    predicted_sp1 = None
 
     def update(adaptation, shift, bias):
         global predicted
         clear_output(wait=True)
         fig = plt.figure(figsize=(14.5, 6))
         ax = fig.add_subplot(1, 1, 1)
-        predicted = adaptation_curve(t, phases, adaptation, shift, bias, upper_limit)
-        obj_frequency, labels = objective_frequency(t, phases, upper_limit)
-        line, = plt.plot(t, predicted.eval(), color='blue', linewidth=3)
+        predicted_sp0 = adaptation_curve(t, phases, adaptation, shift, bias, upper_limit=limit)
+        predicted_sp1 = 1 - adaptation_curve(t, phases, adaptation, shift, bias, lower_limit=limit)
+        obj_frequency, labels = objective_frequency(t, phases, limit)
+        line_sp0, = plt.plot(t, predicted_sp0.eval(), color='blue', linewidth=3)
+        line_sp1, = plt.plot(t, predicted_sp1.eval(), color='green', linewidth=3)
         plt.plot(t, obj_frequency, color='black', linewidth=3)
         plt.axhline(0, color='black')
         plt.ylim(0, 1)
