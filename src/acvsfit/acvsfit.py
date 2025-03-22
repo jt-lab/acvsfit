@@ -158,10 +158,10 @@ def get_model(phases,
                        + "so that its mean is %.2f") % (
                     shift_sigma_dist_b, 3/shift_sigma_dist_b))
 
-        cy_idx = pm.MutableData("cycle_idx", cycle_idx)
-        co_idx = pm.MutableData("condition_idx", condition_idx)
-        p_idx = pm.MutableData("participant_idx", participant_idx)
-        sp_idx = pm.MutableData("starting_plateau_idx", starting_plateau_idx)
+        cy_idx = pm.Data("cycle_idx", cycle_idx)
+        co_idx = pm.Data("condition_idx", condition_idx)
+        p_idx = pm.Data("participant_idx", participant_idx)
+        sp_idx = pm.Data("starting_plateau_idx", starting_plateau_idx)
 
         if len(conditions) > 1:
 
@@ -232,9 +232,10 @@ def get_model(phases,
 
         # Map bias to the starting plateaus
         bias_ = at.stack((bias, -bias), axis=0)
+        
+        limits = pt.constant([lower_limit, upper_limit], name="limits")
 
         # Back-transform adaptation
-        #Back-transform adaptation
         if links['adaptation'] == pm.math.exp:
             adaptation_mu = pm.Deterministic(
                 'adaptation_µ', pm.math.exp(up['adaptation_mu_log']
@@ -250,8 +251,8 @@ def get_model(phases,
                                             adaptation[p_idx, co_idx],
                                             shift[p_idx, co_idx],
                                             bias_[sp_idx, p_idx],
-                                            upper_limit=[upper_limit, lower_limit][sp_idx],
-                                            lower_limit=[upper_limit, lower_limit][-sp_idx]
+                                            upper_limit=limits[sp_idx],
+                                            lower_limit=limits[1-sp_idx]
                                            )
         )
 
