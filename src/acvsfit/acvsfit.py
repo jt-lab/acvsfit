@@ -233,7 +233,7 @@ def get_model(phases,
         # Map bias to the starting plateaus
         bias_ = at.stack((bias, -bias), axis=0)
         
-        limits = pt.constant([lower_limit, upper_limit], name="limits")
+        limits = at.constant([lower_limit, upper_limit], name="limits")
 
         # Back-transform adaptation
         if links['adaptation'] == pm.math.exp:
