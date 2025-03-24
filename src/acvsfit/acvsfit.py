@@ -95,6 +95,7 @@ def get_model(phases,
               custom_priors={},
               custom_links=None,
               silent=False,
+              unlink_from_data=False
 ):
     """Sets up a PyMC model from an adaptation curve defined by phases.
 
@@ -117,6 +118,10 @@ def get_model(phases,
             adaptation, which is linked via an exponential function.
         silent (bool, optional): 
             If True, suppresses status outputs. Defaults to `False`.
+        unlink_from_data (bool, optional):
+            If True, the model is not linked to the observations which allows for sampling
+            purely from the prior but retrieve an inference object that can be used with the
+            same plotting functions that usually run on posterios samples.
 
     Returns:
         pm.Model: 
@@ -256,8 +261,10 @@ def get_model(phases,
                                            )
         )
 
-
-        y = pm.Binomial('y', p=p_selected, n=repetitions, observed=selections)
+        if not unlink_from_data:        
+            y = pm.Binomial('y', p=p_selected, n=repetitions, observed=selections)
+        else:
+            y = pm.Binomial('y', p=p_selected, n=repetitions)
 
         return model
 
@@ -269,7 +276,7 @@ def get_samples(model,
                 file=None,
                 seed=0,
                 thin=None,
-                silent=False
+                silent=False,
 ):
     """Generates posterior samples from a PyMC model.
 
@@ -355,7 +362,7 @@ def interactive(phases, static=False, limit=1):
         fig = plt.figure(figsize=(14.5, 6))
         ax = fig.add_subplot(1, 1, 1)
         predicted_sp0 = adaptation_curve(t, phases, adaptation, shift, bias, upper_limit=limit)
-        predicted_sp1 = 1 - adaptation_curve(t, phases, adaptation, shift, bias, lower_limit=limit)
+        predicted_sp1 = 1 - adaptation_curve(t, phases, adaptation, shift, -bias, lower_limit=limit)
         obj_frequency, labels = objective_frequency(t, phases, limit)
         line_sp0, = plt.plot(t, predicted_sp0.eval(), color='blue', linewidth=3)
         line_sp1, = plt.plot(t, predicted_sp1.eval(), color='green', linewidth=3)
