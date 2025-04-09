@@ -117,9 +117,6 @@ def plot_empirical_participant_curves(data,
     d['Participant'] = data['Participant_ID']
     d['Starting Plateau'] = d['Starting_Plateau_Idx']
     
-#    if spmode == 'tangle':
-#        ylabel_name = t
-
     
     if 'Decline_First_Selection' not in d:
         d.loc[d['Starting_Plateau_Idx'] == 0, 'Proportion Selected'] = d['Selection']
@@ -520,9 +517,10 @@ def plot_participant_ppc(trace, data, phases, colors=None,
     d['Participant'] = d['Participant_ID']
     d['Starting Plateau'] = d['Starting_Plateau_Idx']
     
+
     if spmode == 'tangle':
         ylabel = 'Proportion\n' + tn[1] + ' selected'
-        d[ylabel] = d['Decline_First_Selection'] / d['Repetitions']
+        d[ylabel] = 1 - (d['Decline_First_Selection'] / d['Repetitions'])
         d.loc[d['Starting_Plateau_Idx']==1, ylabel] = 1 - d[ylabel]
     else:
         ylabel = 'Proportion\n decline-first selected'
@@ -535,7 +533,7 @@ def plot_participant_ppc(trace, data, phases, colors=None,
     d = d.loc[d.index.repeat(hdi_samples)]
     d['y'] = samples.T.flatten()
     if spmode=='tangle':
-        d.loc[d['Starting_Plateau_Idx']==1, 'y'] = 1 - d.loc[d['Starting_Plateau_Idx']==1, 'y']
+        d.loc[d['Starting_Plateau_Idx']==0, 'y'] = 1 - d.loc[d['Starting_Plateau_Idx']==0, 'y']
 
     for c,condition in enumerate(cs):
         dsp = d[(d.Condition_Name==condition)].reset_index()
@@ -575,7 +573,7 @@ def plot_group_ppc(trace, data, phases, colors=None,
     if colors is None:
         colors = {}
         for c in cs:
-            colors[c] = ('blue', 'purpel')
+            colors[c] = ('blue', 'purple')
 
     if ax is None:
         f, axs = plt.subplots(len(cs), 1,sharex=True, figsize = (14,3*len(cs)))
