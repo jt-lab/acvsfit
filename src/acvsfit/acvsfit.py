@@ -11,7 +11,7 @@ import arviz as az
 from tqdm import tqdm
 from .data import aggregate, get_end, get_type_names, get_transistion_length, objective_frequency
 import pandas as pd
-from IPython.core.display import display, HTML
+from IPython.display import display, HTML
 
 import pytensor.tensor as at
 
