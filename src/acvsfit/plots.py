@@ -474,7 +474,7 @@ def plot_group_posteriors(trace,
                 az.plot_posterior(trace.posterior[p + '_µ'][:,:,ci],
                                   ax=axs[ci,pi], color=colors[c][0],
                                   ref_val=0, ref_val_color='gray',
-                                  lw=2, alpha=0.3)
+                                  lw=3, alpha=0.4)
                 if ci==0:
                     axs[ci,pi].set_title(parameter_names[pi])
                 else:
@@ -483,7 +483,7 @@ def plot_group_posteriors(trace,
         else:
             az.plot_posterior(trace.posterior[p + '_µ'][:,:], ax=axs[0,pi],
                               ref_val=0, ref_val_color='gray',
-                              color=colors[c][0], lw=2, alpha=0.3)
+                              color=colors[c][0], lw=3, alpha=0.4)
             axs[0,pi].set_title(parameter_names[pi])
             for i in range(1,data.Condition_Name.nunique()):
                 axs[i,pi].axis('off')
