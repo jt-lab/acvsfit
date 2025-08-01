@@ -173,10 +173,10 @@ def get_model(phases,
                        + "so that its mean is %.2f") % (
                     shift_sigma_dist_b, 3/shift_sigma_dist_b))
 
-        cy_idx = pm.Data("cycle_idx", cycle_idx, mutable=True)
-        co_idx = pm.Data("condition_idx", condition_idx, mutable=True)
-        p_idx = pm.Data("participant_idx", participant_idx, mutable=True)
-        sp_idx = pm.Data("starting_plateau_idx", starting_plateau_idx,  mutable=True)
+        cy_idx = pm.Data("cycle_idx", cycle_idx)
+        co_idx = pm.Data("condition_idx", condition_idx)
+        p_idx = pm.Data("participant_idx", participant_idx)
+        sp_idx = pm.Data("starting_plateau_idx", starting_plateau_idx)
         
         up = {}
 
