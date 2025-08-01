@@ -428,7 +428,7 @@ def plot_participant_parameter_posterior(trace,
     #label_list = list(data.Condition_Name.unique())
     #label_list.reverse()
     #ax.legend(label_list)
-
+    ax.get_legend().remove()
     legend_handles = [
         mlines.Line2D([], [], color=color[0], label=cond, linewidth=3)
         for cond, color in colors.items()
@@ -439,7 +439,7 @@ def plot_participant_parameter_posterior(trace,
     participants_list.reverse()
     ax.set_yticklabels(participants_list, ha='left')
     plt.tight_layout()
-    ax.set_title(pp(parameter) + "TEST")
+    ax.set_title(pp(parameter))
     
 def plot_participant_posteriors(trace,
                                 data,
