@@ -1,4 +1,4 @@
-# Copyright (c) 2022 Jan Tünnermann. All rights reserved.
+# Copyright (c) 2022 - 2025 Jan Tünnermann. All rights reserved.
 # This work is licensed under the terms of the MIT license.  
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
@@ -474,7 +474,7 @@ def plot_group_posteriors(trace,
                 az.plot_posterior(trace.posterior[p + '_µ'][:,:,ci],
                                   ax=axs[ci,pi], color=colors[c][0],
                                   ref_val=0, ref_val_color='gray',
-                                  lw=4, alpha=0.65)
+                                  lw=4, alpha=0.75)
                 if ci==0:
                     axs[ci,pi].set_title(parameter_names[pi])
                 else:
@@ -483,7 +483,7 @@ def plot_group_posteriors(trace,
         else:
             az.plot_posterior(trace.posterior[p + '_µ'][:,:], ax=axs[0,pi],
                               ref_val=0, ref_val_color='gray',
-                              color=colors[c][0], lw=4, alpha=0.65)
+                              color=colors[c][0], lw=4, alpha=0.75)
             axs[0,pi].set_title(parameter_names[pi])
             for i in range(1,data.Condition_Name.nunique()):
                 axs[i,pi].axis('off')
@@ -679,9 +679,9 @@ def plot_priors_vs_posteriors(trace, color, condition_name=None, ax_lims={}):
             az.plot_dist_comparison(trace, var_names=name,
                 ax=np.array([[ax2, ax2, ax[y,x]]]),
                 posterior_kwargs={'plot_kwargs' :
-                      {'color' : color, 'linewidth' : 2 }},
+                      {'color' : color, 'linewidth' : 4 }},
                 prior_kwargs={'plot_kwargs' :
-                      {'color' : color,'linestyle' : '--', 'linewidth' : 2}})
+                      {'color' : color,'linestyle' : '--', 'linewidth' : 4}})
             if (para + '_' + moment) in ax_lims:
                 l = ax_lims[para + '_' + moment]
                 ax[y,x].set_xlim(l[0],l[1])
