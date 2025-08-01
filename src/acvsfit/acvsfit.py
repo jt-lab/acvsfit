@@ -95,7 +95,8 @@ def get_model(phases,
               custom_priors={},
               custom_links=None,
               silent=False,
-              unlink_from_data=False
+              unlink_from_data=False,
+              conditions_model='separate'
 ):
     """Sets up a PyMC model from an adaptation curve defined by phases.
 
@@ -122,6 +123,15 @@ def get_model(phases,
             If True, the model is not linked to the observations which allows for sampling
             purely from the prior but retrieve an inference object that can be used with the
             same plotting functions that usually run on posterios samples.
+        conditions_model (string):
+            Only relevant if you have more than one condition.
+            Possible values:
+            'separate': The conditions are handled independently.
+            'separate, shared bias': The conditions are handled independently, except the
+                                     bias parameter, which is shared over all conditions.
+            'correlated varying effects': Correlation is considered for all paramters.
+            'correlated varying effects, shared bias': See above, but bias is fully pooled.      
+            Defaults to 'separate'.
 
     Returns:
         pm.Model: 
@@ -163,47 +173,109 @@ def get_model(phases,
                        + "so that its mean is %.2f") % (
                     shift_sigma_dist_b, 3/shift_sigma_dist_b))
 
-        cy_idx = pm.Data("cycle_idx", cycle_idx)
-        co_idx = pm.Data("condition_idx", condition_idx)
-        p_idx = pm.Data("participant_idx", participant_idx)
-        sp_idx = pm.Data("starting_plateau_idx", starting_plateau_idx)
+        cy_idx = pm.Data("cycle_idx", cycle_idx, mutable=True)
+        co_idx = pm.Data("condition_idx", condition_idx, mutable=True)
+        p_idx = pm.Data("participant_idx", participant_idx, mutable=True)
+        sp_idx = pm.Data("starting_plateau_idx", starting_plateau_idx,  mutable=True)
+        
+        up = {}
 
         if len(conditions) > 1:
-
-            adaptation_mu_log = pm.Normal(
-                'adaptation_µ_log', mu=-1, sigma=1, dims=('Condition')),
-            adaptation_sigma_dist = pm.Gamma.dist(
-                mu=0.5, sigma=1.5, shape=len(conditions))
-            adaptation_chol, _, adaptation_sigma = pm.LKJCholeskyCov(
-                'adaptation_chol_cov', n=len(conditions), eta=1,
-                sd_dist=adaptation_sigma_dist, compute_corr=True)
-            adaptation_effects_z = pm.Normal(
-                'adaptation_effects_z', mu=0, sigma=1,
-                dims=('Participant', 'Condition'))
-            adaptation_effects = pm.Deterministic(
-                'adaptation_effects', at.dot(adaptation_chol, adaptation_effects_z.T).T)
-            adaptation = pm.Deterministic(
-                'adaptation', links['adaptation'](adaptation_mu_log + adaptation_effects))
-
-            shift_mu = pm.Normal(
-                'shift_µ', 0, shift_mu_sigma,
-                dims=('Condition'))
-            shift_sigma_dist = pm.Exponential.dist(
-                shift_sigma_dist_b, shape=len(conditions))
-            shift_chol, _, _ = pm.LKJCholeskyCov(
-                'shift_chol_cov', n=len(conditions), eta=1,
-                sd_dist=shift_sigma_dist, compute_corr=True)
-            shift_effects_z = pm.Normal(
-                'shift_effect_z', mu=0, sigma=1,
-                dims=('Participant', 'Condition'))
-            shift_effects = pm.Deterministic(
-                'shift_effects', at.dot(shift_chol, shift_effects_z.T).T)
-            shift = pm.Deterministic(
-                'shift',  shift_mu + shift_effects)
-
-            bias_mu = pm.Normal('bias_µ', 0, 1)
-            bias_sigma = pm.HalfCauchy('bias_σ', 0.1)
-
+            # TODO: Much of the this needs testing! Currently only the "sepreate" conditions
+            # model is tested.
+            if conditions_model == "separate":
+                default_priors = {
+                'adaptation_mu_log': """
+                      pm.Normal('adaptation_µ_log', mu=-1, sigma=1, dims=['Condition'])
+                      """,
+                'adaptation_sigma_log': """
+                      pm.Gamma('adaptation_σ_log', mu=1.5, sigma=0.5,dims=['Condition'])
+                      """,
+                'shift_mu': """pm.Normal('shift_µ', 0, shift_mu_sigma, dims=['Condition'])
+                      """,
+                'shift_sigma':  """pm.Gamma('shift_σ', alpha=3, beta=shift_sigma_dist_b,
+                      dims=['Condition'])
+                      """,
+                'bias_mu': """
+                      pm.Normal('bias_µ', 0, 1, dims=['Condition'])
+                      """,
+                'bias_sigma': """pm.HalfCauchy('bias_σ', 0.1, dims=['Condition'])
+                      """
+                }
+            elif conditions_model == "separate, shared bias":
+                default_priors = {
+                    'adaptation_mu_log': """
+                          pm.Normal('adaptation_µ_log', mu=-1, sigma=1, dims=['Condition'])
+                          """,
+                    'adaptation_sigma_log': """
+                          pm.Gamma('adaptation_σ_log', mu=1.5, sigma=0.5,dims=['Condition'])
+                          """,
+                    'shift_mu': """
+                          pm.Normal('shift_µ', 0, shift_mu_sigma, dims=['Condition'])
+                          """,
+                    'shift_sigma':  """
+                          pm.Gamma('shift_σ', alpha=3, beta=shift_sigma_dist_b, dims=['Condition'])
+                          """,
+                    'bias_mu': """
+                          pm.Normal('bias_µ', 0, 1)
+                          """,
+                    'bias_sigma': """
+                          pm.HalfCauchy('bias_σ', 0.1)
+                          """
+                }
+             
+            elif conditions_model == "correlated varying effects, shared bias":
+                default_priors = {
+                    'adaptation_mu_log': """
+                          pm.Normal('adaptation_µ_log', mu=-1, sigma=1, dims=['Condition'])
+                          """,
+                    'adaptation_chol': """
+                          pm.LKJCholeskyCov('adaptation_chol_cov', n=len(conditions), eta=2,
+                          sd_dist=pm.Gamma.dist(mu=0.5, sigma=1.5, shape=len(conditions))
+                          compute_corr=True)
+                          """,
+                    'shift_mu': """
+                          pm.Normal('shift_µ', 0, shift_mu_sigma, dims=['Condition'])
+                          """,
+                    'shift_chol': """
+                          pm.LKJCholeskyCov('shift_chol_cov', n=len(conditions), eta=2,
+                          sd_dist=pm.Gamma.dist(alpha=3, beta=shift_sigma_dist_b, shape=len(conditions)),
+                          compute_corr=True)
+                          """,
+                    'bias_mu': """
+                          pm.Normal('bias_µ', 0, 1)
+                          """,
+                    'bias_sigma': """
+                          pm.HalfCauchy('bias_σ', 0.1)
+                          """
+                }
+            elif model_version == "correlated varying effects":
+                default_priors = {
+                    'adaptation_mu_log': """
+                          pm.Normal('adaptation_µ_log', mu=-1, sigma=1, dims=['Condition'])
+                          """,
+                    'adaptation_chol': """
+                          pm.LKJCholeskyCov('adaptation_chol_cov', n=len(conditions), eta=2,
+                          sd_dist=pm.Gamma.dist(mu=0.5, sigma=1.5, shape=len(conditions))
+                          compute_corr=True)
+                          """,
+                    'shift_mu': """
+                          pm.Normal('shift_µ', 0, shift_mu_sigma, dims=['Condition'])
+                          """,
+                    'shift_chol': """
+                          pm.LKJCholeskyCov('shift_chol_cov', n=len(conditions), eta=2,
+                          sd_dist=pm.Gamma.dist(alpha=3, beta=shift_sigma_dist_b, shape=len(conditions)),
+                          compute_corr=True)
+                          """,
+                    'bias_mu': """
+                          pm.Normal('bias_µ', 0, 1, dims=['Condition'])
+                          """,
+                    'bias_chol': """
+                          pm.LKJCholeskyCov('bias_chol_cov', n=len(conditions), eta=2,
+                          sd_dist=pm.HalfCauchy.dist(0.1, shape=len(conditions)),
+                          compute_corr=True)
+                          """
+                }
         else:  # We have only one condition
             default_priors = {
                 'adaptation_mu_log': "pm.Normal('adaptation_µ_log', mu=-1, sigma=1, dims=['Condition'])",
@@ -213,27 +285,34 @@ def get_model(phases,
                 'bias_mu': "pm.Normal('bias_µ', 0, 1)",
                 'bias_sigma': "pm.HalfCauchy('bias_σ', 0.1)"
             }
-            up = {}
-            for variable in default_priors:
-                if variable in custom_priors:
-                    up[variable] = eval(custom_priors[variable])
-                else:
-                    up[variable] = eval(default_priors[variable])
+        for variable in default_priors:
+            if variable in custom_priors:
+                up[variable] = eval(custom_priors[variable].replace('\n', ' '))
+            else:
+                up[variable] = eval(default_priors[variable].replace('\n', ' '))
 
-            adaptation_z = pm.Normal(
-                'adaptation_z', 0, 1,dims=('Participant', 'Condition'))
-            adaptation = pm.Deterministic(
-                'adaptation',  links['adaptation'](up['adaptation_mu_log']
-                                + adaptation_z * up['adaptation_sigma_log']))
+        adaptation_z = pm.Normal(
+            'adaptation_z', 0, 1,dims=('Participant', 'Condition'))
+        adaptation = pm.Deterministic(
+            'adaptation',  links['adaptation'](up['adaptation_mu_log']
+                            + adaptation_z * up['adaptation_sigma_log']))
 
-            shift_z = pm.Normal(
-                'shift_z', 0, 1, dims=('Participant', 'Condition'))
-            shift = pm.Deterministic(
-                'shift',  up['shift_mu'] + shift_z * up['shift_sigma'])
+        shift_z = pm.Normal(
+            'shift_z', 0, 1, dims=('Participant', 'Condition'))
+        shift = pm.Deterministic(
+            'shift',  up['shift_mu'] + shift_z * up['shift_sigma'])
 
-        bias_z = pm.Normal('bias_z', 0, 1, dims=('Participant'))
+        bias_dims = up['bias_mu'].shape.eval()
+        if bias_dims > 1:
+            bias_z_dims = dims=('Participant', 'Condition')
+            bias_idxs = (sp_idx, p_idx, co_idx)
+        else:
+            bias_z_dims = dims=('Participant')
+            bias_idxs = (sp_idx, p_idx)
+        bias_z = pm.Normal('bias_z', 0, 1, dims=bias_z_dims)
         bias = pm.Deterministic(
             'bias',  up['bias_mu'] + bias_z * up['bias_sigma'])
+
 
         # Map bias to the starting plateaus
         bias_ = at.stack((bias, -bias), axis=0)
@@ -244,18 +323,19 @@ def get_model(phases,
         if links['adaptation'] == pm.math.exp:
             adaptation_mu = pm.Deterministic(
                 'adaptation_µ', pm.math.exp(up['adaptation_mu_log']
-                                            + up['adaptation_sigma_log']**2/2))
+                 + up['adaptation_sigma_log']**2/2))
 
             adaptation_sigma = pm.Deterministic(
                 'adaptation_σ', pm.math.exp(up['adaptation_mu_log']
-                                            + 0.5 * up['adaptation_sigma_log']**2)
-                * pm.math.sqrt(pm.math.exp(up['adaptation_sigma_log']**2)-1))
+                 + 0.5 * up['adaptation_sigma_log']**2)
+                 * pm.math.sqrt(pm.math.exp(up['adaptation_sigma_log']**2)-1))
 
+            
         p_selected = pm.Deterministic(
             'p_selected',  adaptation_curve(cy_idx, phases,
                                             adaptation[p_idx, co_idx],
                                             shift[p_idx, co_idx],
-                                            bias_[sp_idx, p_idx],
+                                            bias_[bias_idxs],
                                             upper_limit=limits[sp_idx],
                                             lower_limit=limits[1-sp_idx]
                                            )
@@ -277,6 +357,8 @@ def get_samples(model,
                 seed=0,
                 thin=None,
                 silent=False,
+                compress=True,
+                **kwargs,
 ):
     """Generates posterior samples from a PyMC model.
 
@@ -299,6 +381,10 @@ def get_samples(model,
             Keep only every nth sample to thin the trace (default is None).
         silent (bool, optional): 
             If True, suppresses status outputs (default is False).
+        **kwargs: Further kwargs are passed to PyMCs sample function.
+        compress: bool
+            Whether to save netCDF file with the compress=True flag;
+            defaults to True. 
 
     Returns:
         Trace: 
@@ -309,7 +395,7 @@ def get_samples(model,
         if file is None or not os.path.isfile(str(file)):
             print('Sampling posterior')
             trace = pm.sample(samples, tune=tune,
-                              target_accept=target_accept, random_seed=seed)
+                              target_accept=target_accept, random_seed=seed, **kwargs)
 
             if thin is not None:
                 trace = trace.sel(draw=slice(0, None, thin))
@@ -321,7 +407,7 @@ def get_samples(model,
                 trace, random_seed=seed))
             if file is not None:
                 print('Saving trace to file')
-                trace.to_netcdf(file)
+                trace.to_netcdf(file, compress=compress)
         else:
             if not silent:
                 print('Loading samples from disk! Delete/rename the existing file ' +

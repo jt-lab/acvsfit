@@ -156,18 +156,22 @@ def plot_prior_simulations(model, phases, fix_adaptation=None,
     ci = np.linspace(0, end-1, end)
    
     if fix_adaptation is None:
-        adaptation=trace.prior['adaptation'].values[0,-simulations:,0,0].reshape(-1,1)
+        adaptation = trace.prior['adaptation'].values[0,-simulations:,0,0].reshape(-1,1)
     else:
-        adaptation=fix_adaptation
+        adaptation = fix_adaptation
     if fix_shift is None:
-        shift=trace.prior['shift'].values[0,-simulations:,0,0].reshape(-1,1)
+        shift = trace.prior['shift'].values[0,-simulations:,0,0].reshape(-1,1)
     else:
-        shift=fix_shift
+        shift = fix_shift
 
     if fix_bias is None:
-        bias=trace.prior['bias'].values[0,-simulations:,0].reshape(-1,1)
+        vals = trace.prior['bias'].values
+        if vals.ndim == 3:
+            bias = vals.reshape[0,-simulations:,0](-1,1)
+        else:
+            bias = vals.reshape[0,-simulations:,0,0](-1,1)
     else:
-        bias=fix_bias
+        bias = fix_bias
 
     adaptation_curves = adaptation_curve(ci, phases, adaptation=adaptation, shift=shift, bias=bias, upper_limit=upper_limit).eval()
     ax.plot(adaptation_curves.T)
@@ -202,7 +206,11 @@ def plot_priors(model,
         axs[0].set_xlim(0,10)
         az.plot_density(trace.prior["shift"][0,:,0,0], ax=axs[1], point_estimate=None)
         axs[1].set_title('Shift $\delta$')
-        az.plot_density(trace.prior["bias"][0,:,0], ax=axs[2], point_estimate=None)
+        vals = trace.prior["bias"].values
+        if vals.ndim == 3:
+            az.plot_density(trace.prior["bias"][0,:,0], ax=axs[2], point_estimate=None)
+        else:
+            az.plot_density(trace.prior["bias"][0,:,0,0], ax=axs[2], point_estimate=None)
         axs[2].set_title('Bias $\\beta$')
 
     
@@ -234,7 +242,11 @@ def plot_prior_simulations_quartet(model,
    
     adaptation=trace.prior['adaptation'].values[0,-simulations:,0,0].reshape(-1,1)
     shift=trace.prior['shift'].values[0,-simulations:,0,0].reshape(-1,1)
-    bias=trace.prior['bias'].values[0,-simulations:,0].reshape(-1,1)
+    vals = trace.prior['bias'].values
+    if vals.ndim == 3:
+        bias=vals[0,-simulations:,0].reshape(-1,1)
+    else:
+        bias=vals[0,-simulations:,0,0].reshape(-1,1)
 
     acs = adaptation_curve(ci, phases, adaptation=adaptation,
                            shift=shift, bias=bias, upper_limit=upper_limit).eval().T
