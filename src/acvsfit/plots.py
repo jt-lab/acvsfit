@@ -11,6 +11,7 @@ from .data import aggregate, unaggregate, get_end
 import seaborn as sns
 from matplotlib.pylab import plt
 from matplotlib.patches import Rectangle
+import matplotlib.lines as mlines
 from IPython.display import display, Markdown, Latex
 from arviz.plots.plot_utils import calculate_point_estimate
 from arviz.rcparams import rcParams
@@ -480,7 +481,7 @@ def plot_group_posteriors(trace,
                 az.plot_posterior(trace.posterior[p + '_µ'][:,:,ci],
                                   ax=axs[ci,pi], color=colors[c][0],
                                   ref_val=0, ref_val_color='gray',
-                                  lw=4, alpha=0.75)
+                                  lw=3, alpha=0.45)
                 if ci==0:
                     axs[ci,pi].set_title(parameter_names[pi])
                 else:
@@ -489,7 +490,7 @@ def plot_group_posteriors(trace,
         else:
             az.plot_posterior(trace.posterior[p + '_µ'][:,:], ax=axs[0,pi],
                               ref_val=0, ref_val_color='gray',
-                              color=colors[c][0], lw=4, alpha=0.75)
+                              color=colors[c][0], lw=3, alpha=0.45)
             axs[0,pi].set_title(parameter_names[pi])
             for i in range(1,data.Condition_Name.nunique()):
                 axs[i,pi].axis('off')
