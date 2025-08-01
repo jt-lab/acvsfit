@@ -431,9 +431,8 @@ def plot_participant_parameter_posterior(trace,
 
     legend_handles = [
         mlines.Line2D([], [], color=color, label=cond, linewidth=2)
-        for cond, color in condition_colors.items()
+        for cond, color in colors.items()
     ]
-
     ax.legend(handles=legend_handles)                                 
 
     participants_list = list(data.Participant_ID.unique())
