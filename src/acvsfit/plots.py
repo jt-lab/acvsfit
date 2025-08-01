@@ -200,7 +200,7 @@ def plot_priors(model,
     else:
         if axs.shape != (1,3):
             raise RuntimeError("Shape of the axis provided to the axs argument must be (1,3)")
-    with az.rc_context({"stats.hdi_prob": 0.99}):
+    with az.rc_context({"stats.ci_prob": 0.99}):
         az.plot_density(trace.prior["adaptation"][0,:,0,0], ax=axs[0], point_estimate=None)
         axs[0].set_title('Adaptation $\\tau$')
         axs[0].set_xlim(0,10)
@@ -632,7 +632,7 @@ def plot_group_ppc(trace, data, phases, colors=None,
                     mode_ = mean_over_ps.mean() 
                     # calculate_point_estimate(point_estimate=rcParams["plot.point_estimate"],
                     # values=mean_over_ps)
-                    hdi_ = hdi(np.array(mean_over_ps), hdi_prob=0.95)
+                    hdi_ = hdi(np.array(mean_over_ps), ci_prob=0.95)
                     cycle_list = np.append(cycle_list, ci)
                     mode_list = np.append(mode_list, mode_)
                     low_hdi_list = np.append(low_hdi_list, hdi_[0])
