@@ -15,7 +15,7 @@ from IPython.display import display, Markdown, Latex
 from arviz.plots.plot_utils import calculate_point_estimate
 from arviz.rcparams import rcParams
 from arviz import hdi
-from IPython.core.display import display, HTML
+from IPython.display import display, HTML
 
 def plot_empirical_curves(data, phases, colors=None,
                           label_every_nth=1, spmode='tangle',
