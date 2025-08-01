@@ -425,9 +425,16 @@ def plot_participant_parameter_posterior(trace,
                    combined=True, colors=color_list)
     
     #if len(trace.posterior[parameter].shape) > 3:
-    label_list = list(data.Condition_Name.unique())
-    label_list.reverse()
-    ax.legend(label_list)
+    #label_list = list(data.Condition_Name.unique())
+    #label_list.reverse()
+    #ax.legend(label_list)
+
+    import matplotlib.lines as mlines
+    label_list = list(data.Condition_Name.unique())[::-1]
+    all_lines = [line for line in ax.get_lines() if isinstance(line, mlines.Line2D)]
+    line_label_map = {line.get_label(): line for line in all_lines}
+    handles = [line_label_map[label] for label in label_list if label in line_label_map]
+    ax.legend(handles, label_list)                                      
 
     participants_list = list(data.Participant_ID.unique())
     participants_list.reverse()
