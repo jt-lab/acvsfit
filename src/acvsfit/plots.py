@@ -27,10 +27,18 @@ def plot_empirical_curves(data, phases, colors=None,
     cs = data.Condition_Name.unique()
     sps = data.Starting_Plateau_Idx.unique().astype(int)
     
+    
+    markers = {}
     if colors == None:
-        colors = {}
+        colors = {}        
         for c in cs:
             colors[c] = ('blue', 'purpel')
+            markers[c] = ('o', 'o')
+    else:
+        for c in cs:
+            if 'markers' in colors[cn]:
+                markers[c] = colors[cn]['markers']
+        
 
     if ax is None:
         f, axs = plt.subplots(len(cs), 1,sharex=True, figsize = (14,3*len(cs)))
@@ -62,10 +70,6 @@ def plot_empirical_curves(data, phases, colors=None,
         axs[c].plot(obj_freq, color="gainsboro")
         axs[c].axhline(y=0.5, color="gainsboro", linestyle='--')
         
-        #if draw_transition_center is not None:
-        #    axs[c].axhline(y=draw_transition_center,
-        #                   color="gainsboro", linestyle='--')
-        
         for il,l in enumerate(labels[:-1]): 
             if 'P' in l and 'P' in labels[il+1]:
                 axs[c].add_patch(Rectangle((il, 0), 1, 1,
@@ -79,11 +83,11 @@ def plot_empirical_curves(data, phases, colors=None,
                 sns.lineplot(data=dsp, x='Cycle State',
                     y=tn[s] + ' Selections', ax=axs[c],
                     linestyle='dashed', label=plotlabels[s],
-                    marker='x', color=colors[condition][s])
+                    marker=colors[condition]['markers'][s], color=colors[condition][s])
             else:
                 sns.lineplot(data=dsp, x='Cycle State', y=tn[s] + ' Selections',
                     ax=axs[c], linestyle='', errorbar='se', label= plotlabels[s],
-                    err_style='bars', marker='o', color=colors[condition][s])
+                    err_style='bars', marker=colors[condition]['markers'][s], color=colors[condition][s])
             
             axs[c].legend(loc='upper right')
             axs[c].set_ylabel(ylabel)
@@ -670,6 +674,12 @@ def plot_group_ppc(trace, data, phases, colors=None,
 def plot_priors_vs_posteriors(trace, color, condition_name=None, ax_lims={}):
     f,ax = plt.subplots(2,3, figsize=(16,4))
     f2,ax2 = plt.subplots(1)
+    
+    if condition_name in trace.posterior:
+        selected_samples = trace.sel(Condition=condition_name)
+    else:
+        selected_samples = trace
+    
     for x, para in enumerate(['adaptation', 'shift', 'bias']):
         for y, moment in enumerate(['µ', 'σ']):
             if para == 'adaptation':
