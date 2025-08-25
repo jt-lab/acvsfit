@@ -76,11 +76,11 @@ def plot_empirical_curves(data, phases, colors=None,
                 sns.lineplot(data=dsp, x='Cycle State',
                     y=tn[s] + ' Selections', ax=axs[c],
                     linestyle='dashed', label=plotlabels[s],
-                    marker=colors[condition]['markers'][s], color=colors[condition][s])
+                    marker='o', color=colors[condition][s])
             else:
                 sns.lineplot(data=dsp, x='Cycle State', y=tn[s] + ' Selections',
                     ax=axs[c], linestyle='', errorbar='se', label= plotlabels[s],
-                    err_style='bars', marker=colors[condition]['markers'][s], color=colors[condition][s])
+                    err_style='bars', marker='o', color=colors[condition][s])
             
             axs[c].legend(loc='upper right')
             axs[c].set_ylabel(ylabel)
