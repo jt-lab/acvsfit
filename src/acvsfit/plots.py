@@ -685,7 +685,7 @@ def plot_priors_vs_posteriors(trace, color, condition_name=None, ax_lims={}):
                 name =  para + '_' + moment + '_log'
             else:
                 name =  para + '_' + moment
-            az.plot_dist_comparison(trace, var_names=name,
+            az.plot_dist_comparison(selected_samples, var_names=name,
                 ax=np.array([[ax2, ax2, ax[y,x]]]),
                 posterior_kwargs={'plot_kwargs' :
                       {'color' : color, 'linewidth' : 4 }},
