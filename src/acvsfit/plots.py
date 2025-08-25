@@ -27,20 +27,12 @@ def plot_empirical_curves(data, phases, colors=None,
     tn = get_type_names(phases)
     cs = data.Condition_Name.unique()
     sps = data.Starting_Plateau_Idx.unique().astype(int)
-    
-    
-    markers = {}
+
     if colors == None:
         colors = {}        
         for c in cs:
-            colors[c] = ('blue', 'purpel')
-            markers[c] = ('o', 'o')
-    else:
-        for c in cs:
-            if 'markers' in colors[cn]:
-                markers[c] = colors[cn]['markers']
-        
-
+            colors[c] = ('blue', 'purple')
+   
     if ax is None:
         f, axs = plt.subplots(len(cs), 1,sharex=True, figsize = (14,3*len(cs)))
     else:
