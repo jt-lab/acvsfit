@@ -1,4 +1,4 @@
-# Copyright (c) 2022 Jan Tünnermann. All rights reserved.
+# Copyright (c) 2022 - 2025 Jan Tünnermann. All rights reserved.
 # This work is licensed under the terms of the MIT license.  
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
@@ -11,11 +11,12 @@ from .data import aggregate, unaggregate, get_end
 import seaborn as sns
 from matplotlib.pylab import plt
 from matplotlib.patches import Rectangle
+import matplotlib.lines as mlines
 from IPython.display import display, Markdown, Latex
 from arviz.plots.plot_utils import calculate_point_estimate
 from arviz.rcparams import rcParams
 from arviz import hdi
-from IPython.core.display import display, HTML
+from IPython.display import display, HTML
 
 def plot_empirical_curves(data, phases, colors=None,
                           label_every_nth=1, spmode='tangle',
@@ -204,7 +205,7 @@ def plot_priors(model,
     else:
         if axs.shape != (1,3):
             raise RuntimeError("Shape of the axis provided to the axs argument must be (1,3)")
-    with az.rc_context({"stats.hdi_prob": 0.99}):
+    with az.rc_context({"stats.ci_prob": 0.99}):
         az.plot_density(trace.prior["adaptation"][0,:,0,0], ax=axs[0], point_estimate=None)
         axs[0].set_title('Adaptation $\\tau$')
         axs[0].set_xlim(0,10)
@@ -429,9 +430,15 @@ def plot_participant_parameter_posterior(trace,
                    combined=True, colors=color_list)
     
     #if len(trace.posterior[parameter].shape) > 3:
-    label_list = list(data.Condition_Name.unique())
-    label_list.reverse()
-    ax.legend(label_list)
+    #label_list = list(data.Condition_Name.unique())
+    #label_list.reverse()
+    #ax.legend(label_list)
+    ax.get_legend().remove()
+    legend_handles = [
+        mlines.Line2D([], [], color=color[0], label=cond, linewidth=3)
+        for cond, color in colors.items()
+    ]
+    ax.legend(handles=legend_handles)                                 
 
     participants_list = list(data.Participant_ID.unique())
     participants_list.reverse()
@@ -478,7 +485,7 @@ def plot_group_posteriors(trace,
                 az.plot_posterior(trace.posterior[p + '_µ'][:,:,ci],
                                   ax=axs[ci,pi], color=colors[c][0],
                                   ref_val=0, ref_val_color='gray',
-                                  lw=2, alpha=0.3)
+                                  lw=3, alpha=0.45)
                 if ci==0:
                     axs[ci,pi].set_title(parameter_names[pi])
                 else:
@@ -487,7 +494,7 @@ def plot_group_posteriors(trace,
         else:
             az.plot_posterior(trace.posterior[p + '_µ'][:,:], ax=axs[0,pi],
                               ref_val=0, ref_val_color='gray',
-                              color=colors[c][0], lw=2, alpha=0.3)
+                              color=colors[c][0], lw=3, alpha=0.45)
             axs[0,pi].set_title(parameter_names[pi])
             for i in range(1,data.Condition_Name.nunique()):
                 axs[i,pi].axis('off')
@@ -636,7 +643,7 @@ def plot_group_ppc(trace, data, phases, colors=None,
                     mode_ = mean_over_ps.mean() 
                     # calculate_point_estimate(point_estimate=rcParams["plot.point_estimate"],
                     # values=mean_over_ps)
-                    hdi_ = hdi(np.array(mean_over_ps), hdi_prob=0.95)
+                    hdi_ = hdi(np.array(mean_over_ps), ci_prob=0.95)
                     cycle_list = np.append(cycle_list, ci)
                     mode_list = np.append(mode_list, mode_)
                     low_hdi_list = np.append(low_hdi_list, hdi_[0])
@@ -689,9 +696,9 @@ def plot_priors_vs_posteriors(trace, color, condition_name=None, ax_lims={}):
             az.plot_dist_comparison(trace, var_names=name,
                 ax=np.array([[ax2, ax2, ax[y,x]]]),
                 posterior_kwargs={'plot_kwargs' :
-                      {'color' : color, 'linewidth' : 2 }},
+                      {'color' : color, 'linewidth' : 4 }},
                 prior_kwargs={'plot_kwargs' :
-                      {'color' : color,'linestyle' : '--', 'linewidth' : 2}})
+                      {'color' : color,'linestyle' : '--', 'linewidth' : 4}})
             if (para + '_' + moment) in ax_lims:
                 l = ax_lims[para + '_' + moment]
                 ax[y,x].set_xlim(l[0],l[1])
