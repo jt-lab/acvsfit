@@ -674,7 +674,7 @@ def plot_priors_vs_posteriors(trace, color, condition_name=None, ax_lims={}):
     f,ax = plt.subplots(2,3, figsize=(16,4))
     f2,ax2 = plt.subplots(1)
     
-    if condition_name in trace.posterior:
+    if condition_name in trace.posterior.Condition:
         selected_samples = trace.sel(Condition=condition_name)
     else:
         selected_samples = trace
