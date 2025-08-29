@@ -455,6 +455,7 @@ def plot_group_posteriors(trace,
                                data,
                                colors=None,
                                ax=None,
+                               ref_vals=[None, None, None],
                                save=''):
     
     parameters = ['adaptation', 'shift', 'bias']
@@ -469,14 +470,13 @@ def plot_group_posteriors(trace,
     
     if cs == 1:
         axs = np.expand_dims(axs, axis=0) # For compatibiliy with list access
-    
 
     for pi,p in enumerate(parameters):
         if len(trace.posterior[p].shape) > 3:
             for ci,c in enumerate(data.Condition_Name.unique()):
                 az.plot_posterior(trace.posterior[p + '_µ'][:,:,ci],
                                   ax=axs[ci,pi], color=colors[c][0],
-                                  ref_val=0, ref_val_color='gray',
+                                  ref_val=ref_vals[pi], ref_val_color='gray',
                                   lw=3, alpha=0.45)
                 if ci==0:
                     axs[ci,pi].set_title(parameter_names[pi])
